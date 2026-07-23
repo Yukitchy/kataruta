@@ -372,12 +372,15 @@ else{
 
 /* ---------- 完成 → 文庫ページ＋共有リンク（サーバー不要・URLに物語を格納） ---------- */
 const esc = x=>x.replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]));
+/* UTF-8 → base64（日本語をそのまま％符号化すると URL が3倍に膨らむため） */
+const b64e = o=>btoa(String.fromCharCode(...new TextEncoder().encode(JSON.stringify(o))));
+const b64d = s=>JSON.parse(new TextDecoder().decode(Uint8Array.from(atob(s),c=>c.charCodeAt(0))));
 function showBook(s){
   if(s.lang && s.lang!==lang) setLang(s.lang);
   $("#setup").style.display="none"; $("#play").style.display="none"; $("#book").style.display="flex";
   $("#bTitle").textContent = s.odai;
   $("#bList").innerHTML = s.items.map(i=>`<li><span class="cw">${esc(i.w)}</span><span>${esc(i.t)}</span></li>`).join("");
-  location.hash = "s=" + btoa(encodeURIComponent(JSON.stringify(s)));
+  location.hash = "s=" + b64e(s);
   stopTimer();
 }
 $("#copy").onclick = async e=>{
@@ -390,7 +393,7 @@ $("#again").onclick = ()=>{ location.hash=""; location.reload(); };
 setLang(navigator.language && navigator.language.startsWith("ja") ? "ja" : "ja");
 (()=>{ const m=location.hash.match(/s=(.+)/);
   if(!m) return;
-  try{ showBook(JSON.parse(decodeURIComponent(atob(m[1])))); }catch{}
+  try{ showBook(b64d(m[1])); }catch{}
 })();
 
 /* self-check: 両言語ぶん、3項目そろったカードだけを持つ */
