@@ -42,6 +42,8 @@
   .chip{border:1px solid var(--line);background:#fff;border-radius:999px;padding:7px 14px;font-size:13px;
         cursor:pointer;font-family:inherit;color:var(--sub);font-weight:700}
   .chip[aria-pressed="true"]{background:var(--ink);color:#fff;border-color:var(--ink)}
+  .chip:disabled{opacity:.3;cursor:default}
+  #redoRow{display:flex;justify-content:center;padding:12px 0 0}
   .spacer{flex:1}
   #count{font-variant-numeric:tabular-nums;font-weight:700;color:var(--ink)}
 
@@ -150,13 +152,15 @@
     </button>
   </div></div>
   <div id="timer"><i></i></div>
+  <div id="redoRow"><button class="chip" id="redraw" disabled>🔄 引き直し</button></div>
 
   <div id="compose">
-    <div class="prog"><span id="pnum">1</span> / 5</div>
+    <div class="prog"><span id="pnum">1</span><span id="t-punit">文目</span></div>
     <textarea id="line" rows="2"></textarea>
     <div class="crow">
       <button class="chip" id="mic" aria-pressed="false">🎤</button>
       <button class="btn sm" id="next">つぎへ</button>
+      <button class="chip" id="finish" disabled>おわり</button>
     </div>
   </div>
 
@@ -187,6 +191,7 @@ ja:{
   remain:"のこり",cards:"枚",shuffle:"シャッフル",back:"デッキ選択",tap:"タップしてめくる",space:"SPACE キーでもOK",
   p1:"せんせい",p2:"せいと",nextTurn:t=>`つぎは <span>${t}</span>`,
   next:"つぎへ",mic:"🎤 はなす",ph:"このことばで、つづきを一文どうぞ",
+  redraw:"🔄 引き直し",finish:"おわり",punit:"文目",
   bookLbl:"きょうの ものがたり",copy:"リンクをコピー",copied:"コピーしました！",again:"もう一度あそぶ",cards_n:"枚"},
  odai:["きのう、ちょっと変なことがありました。","わたしの一番すきな場所は…","はじめて日本に来た日のこと。","むかしむかし、あるところに…","実は、まだだれにも言っていないことがあります。","きょう、朝おきていちばんにしたことは…","10年後のわたしは…","この町でいちばんおいしいものは…","こまったとき、いつもこうします。","小さいころ、こわかったものは…"],
  decks:{
@@ -204,6 +209,7 @@ en:{
   remain:"",cards:" left",shuffle:"Shuffle",back:"Decks",tap:"Tap to flip",space:"or press SPACE",
   p1:"Teacher",p2:"Student",nextTurn:t=>`Next: <span>${t}</span>`,
   next:"Next",mic:"🎤 Speak",ph:"Continue the story with this word",
+  redraw:"🔄 Redraw",finish:"Finish",punit:" ",
   bookLbl:"T O D A Y ' S　S T O R Y",copy:"Copy link",copied:"Copied!",again:"Play again",cards_n:""},
  odai:["Yesterday, something strange happened.","My favorite place in the world is...","The first time I came to Japan...","Once upon a time, in a small town...","There's something I've never told anyone.","The first thing I did this morning was...","Ten years from now, I will...","The best food in this town is...","Whenever I'm in trouble, I always...","When I was little, I was scared of..."],
  decks:{
@@ -216,7 +222,6 @@ en:{
 };
 
 const $=s=>document.querySelector(s);
-const STORY_LEN=5;
 let lang="ja", L=null, DECKS=null;
 let picked=new Set(["standard"]), pile=[], turnIdx=0, timerId=null, cur=null, story=null;
 
@@ -236,6 +241,7 @@ function setLang(l){
   $("#shuffle").textContent=u.shuffle; $("#back").textContent=u.back;
   $("#t-tap").textContent=u.tap; $("#t-space").textContent=u.space;
   $("#next").textContent=u.next; $("#mic").textContent=u.mic; $("#line").placeholder=u.ph;
+  $("#redraw").textContent=u.redraw; $("#finish").textContent=u.finish; $("#t-punit").textContent=u.punit;
   $("#t-booklbl").textContent=u.bookLbl; $("#copy").textContent=u.copy; $("#again").textContent=u.again;
   document.querySelectorAll("#lang .chip").forEach(b=>b.setAttribute("aria-pressed",b.dataset.lang===l));
   picked=new Set(["standard"]); renderDecks(); $("#odai").innerHTML="";
@@ -269,9 +275,16 @@ function refill(){
   setCount();
 }
 function shuffle(){                       // 明示リセット：履歴もクリア
-  refill(); $("#card").classList.remove("flip"); $("#log").innerHTML=""; cur=null; stopTimer();
+  refill(); $("#card").classList.remove("flip"); $("#log").innerHTML=""; cur=null;
+  $("#redraw").disabled=true; stopTimer();
 }
 $("#shuffle").onclick = e=>{ e.stopPropagation(); shuffle(); };
+/* 気に入らない札は捨てて引き直す（捨て札は履歴からも消す） */
+$("#redraw").onclick = e=>{ e.stopPropagation();
+  if(!cur) return;
+  $("#log").firstElementChild?.remove();
+  draw();
+};
 
 /* ---------- draw ---------- */
 function draw(){
@@ -282,7 +295,7 @@ function draw(){
   $("#tag").textContent = d.name; $("#tag").style.color = d.c;
   $("#w").textContent = c.w; $("#r").textContent = c.r||""; $("#e").textContent = c.e;
   $("#card").classList.add("flip");
-  setCount();
+  setCount(); $("#redraw").disabled=false;
 
   const li=document.createElement("li");
   li.style.setProperty("--c",d.c);
@@ -335,7 +348,8 @@ function stopTimer(){ if(timerId) clearInterval(timerId); timerId=null; }
 $("#tStory").onclick = e=>{ toggle(e.target);
   const on = e.target.getAttribute("aria-pressed")==="true";
   $("#compose").style.display = on?"flex":"none";
-  if(on){ story={odai:pickOdai(),items:[],lang}; $("#pnum").textContent=1; $("#line").value=""; shuffle(); }
+  if(on){ story={odai:pickOdai(),items:[],lang}; $("#pnum").textContent=1; $("#line").value="";
+          $("#finish").disabled=true; shuffle(); }
   else story=null;
 };
 $("#line").addEventListener("keydown", e=>{
@@ -350,9 +364,15 @@ $("#next").onclick = ()=>{
   if(!t){ $("#line").focus(); return; }
   story.items.push({w:cur.w, t});
   $("#line").value=""; cur=null;
-  if(story.items.length>=STORY_LEN) return showBook(story);
   $("#pnum").textContent = story.items.length+1;
+  $("#finish").disabled = false;             // 1文でも書けば、いつでも終われる
   draw();
+};
+$("#finish").onclick = ()=>{
+  if(!story) return;
+  const t = $("#line").value.trim();
+  if(t && cur){ story.items.push({w:cur.w, t}); }   // 書きかけの一文も拾って締める
+  if(story.items.length) showBook(story);
 };
 
 /* ---------- 音声入力（対応ブラウザのみ・結果はあとから直せる） ---------- */
