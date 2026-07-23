@@ -424,22 +424,23 @@ function showBook(s){
 }
 
 /* 翻訳：Chrome内蔵の端末内翻訳（無料・キー不要）。非対応ならGoogle翻訳に投げる */
+const withTimeout=(p,ms)=>Promise.race([p,new Promise((_,rj)=>setTimeout(()=>rj(0),ms))]);
 $("#tr").onclick = async e=>{
   if(!shown) return;
   const src = shown.lang||"ja", dst = src==="ja" ? "en" : "ja";
   const b = e.currentTarget;
-  if(!("Translator" in self)){
-    const txt = [shown.odai, ...shown.items.map(i=>i.t)].join("\n");
-    open(`https://translate.google.com/?sl=${src}&tl=${dst}&op=translate&text=${encodeURIComponent(txt)}`,"_blank");
-    return;
-  }
+  const gtr = ()=>{ const txt=[shown.odai,...shown.items.map(i=>i.t)].join("\n");
+    open(`https://translate.google.com/?sl=${src}&tl=${dst}&op=translate&text=${encodeURIComponent(txt)}`,"_blank"); };
+  if(!("Translator" in self)) return gtr();
   b.disabled=true; b.textContent=L.ui.translating;
   try{
-    const t = await Translator.create({sourceLanguage:src,targetLanguage:dst});
-    shown.tr = [];
-    for(const i of shown.items) shown.tr.push(await t.translate(i.t));
+    // 端末内モデルは初回DLで待たされる／環境によっては応答しない → 15秒で見切る
+    const t = await withTimeout(Translator.create({sourceLanguage:src,targetLanguage:dst}),15000);
+    const out=[];
+    for(const i of shown.items) out.push(await withTimeout(t.translate(i.t),15000));
+    shown.tr = out;
     renderBook(shown); location.hash = "s=" + b64e(shown);
-  }catch{ b.textContent=L.ui.trFail; b.disabled=false; }
+  }catch{ gtr(); b.textContent=L.ui.tr; b.disabled=false; }
 };
 $("#copy").onclick = async e=>{
   try{ await navigator.clipboard.writeText(location.href); e.target.textContent=L.ui.copied; }
