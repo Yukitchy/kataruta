@@ -338,6 +338,11 @@ $("#tStory").onclick = e=>{ toggle(e.target);
   if(on){ story={odai:pickOdai(),items:[],lang}; $("#pnum").textContent=1; $("#line").value=""; shuffle(); }
   else story=null;
 };
+$("#line").addEventListener("keydown", e=>{
+  // Enterで次へ。ただし日本語変換中(IME)のEnterは確定なので無視、Shift+Enterは改行
+  if(e.key!=="Enter" || e.shiftKey || e.isComposing || e.keyCode===229) return;
+  e.preventDefault(); $("#next").click();
+});
 $("#next").onclick = ()=>{
   if(!story) return;
   if(!cur){ draw(); return; }                       // まだ1枚もめくってない
