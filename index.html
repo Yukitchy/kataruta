@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>カタルタ｜会話をつむぐカード</title>
+<style>
+  :root{ --paper:#fdfbf7; --ink:#2b2620; --sub:#8a8177; --line:#e6ded0; --accent:#c0392b; }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;height:100%}
+  body{
+    background:var(--paper); color:var(--ink);
+    font-family:"Hiragino Sans","Noto Sans JP","Yu Gothic",system-ui,sans-serif;
+    display:flex;flex-direction:column;min-height:100dvh;overflow-x:hidden;
+  }
+
+  /* ---------- setup ---------- */
+  #setup{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:26px;padding:32px 20px}
+  #lang{display:flex;gap:8px}
+  h1{font-size:clamp(28px,6vw,44px);margin:0;letter-spacing:.12em;text-align:center}
+  h1 small{display:block;font-size:13px;letter-spacing:.25em;color:var(--sub);margin-top:10px;font-weight:400}
+  .decks{display:flex;flex-wrap:wrap;gap:12px;justify-content:center;max-width:680px}
+  .deck{
+    border:2px solid var(--line);background:#fff;border-radius:16px;padding:14px 20px;cursor:pointer;
+    font-size:17px;font-weight:700;display:flex;align-items:center;gap:10px;transition:.15s;color:var(--sub);
+    font-family:inherit;text-align:left;
+  }
+  .deck .dot{width:14px;height:14px;border-radius:50%;background:var(--line);flex:0 0 auto}
+  .deck[aria-pressed="true"]{border-color:var(--c);color:var(--ink);box-shadow:0 4px 0 var(--c)}
+  .deck[aria-pressed="true"] .dot{background:var(--c)}
+  .deck small{display:block;font-size:11px;font-weight:400;color:var(--sub)}
+  .btn{border:none;border-radius:999px;padding:16px 44px;font-size:18px;font-weight:700;
+       background:var(--ink);color:#fff;cursor:pointer;font-family:inherit}
+  .btn:disabled{opacity:.3;cursor:default}
+  .btn.sm{padding:12px 28px;font-size:15px}
+  .hint{color:var(--sub);font-size:13px;text-align:center;line-height:1.9;max-width:540px}
+
+  /* ---------- play ---------- */
+  #play{display:none;flex:1;flex-direction:column;min-height:100dvh}
+  header{display:flex;align-items:center;gap:8px;padding:10px 14px;border-bottom:1px solid var(--line);
+         flex-wrap:wrap;font-size:13px;color:var(--sub)}
+  .chip{border:1px solid var(--line);background:#fff;border-radius:999px;padding:7px 14px;font-size:13px;
+        cursor:pointer;font-family:inherit;color:var(--sub);font-weight:700}
+  .chip[aria-pressed="true"]{background:var(--ink);color:#fff;border-color:var(--ink)}
+  .spacer{flex:1}
+  #count{font-variant-numeric:tabular-nums;font-weight:700;color:var(--ink)}
+
+  #turn{text-align:center;font-size:clamp(15px,3.5vw,20px);font-weight:700;padding:14px 10px 0;letter-spacing:.05em}
+  #turn span{color:var(--accent)}
+  #odai{text-align:center;font-size:clamp(14px,3.4vw,18px);padding:8px 20px;min-height:1.5em;font-weight:700}
+  #odai b{color:var(--accent);font-size:11px;letter-spacing:.2em;margin-right:8px;vertical-align:2px}
+
+  #stage{flex:1;display:flex;align-items:center;justify-content:center;padding:16px;perspective:1400px}
+  /* 山札に見せる：カードの後ろに紙を2枚ずらして敷く */
+  #cardWrap{position:relative;width:min(92vw,620px);aspect-ratio:5/3.2}
+  #cardWrap::before,#cardWrap::after{content:"";position:absolute;inset:0;border-radius:24px;background:#fff;
+    border:1px solid var(--line);z-index:-1}
+  #cardWrap::before{transform:translate(7px,7px)}
+  #cardWrap::after{transform:translate(14px,14px)}
+  #cardWrap.last::before,#cardWrap.last::after{display:none}
+  #card{width:100%;height:100%;cursor:pointer;position:relative;transform-style:preserve-3d;
+        transition:transform .45s cubic-bezier(.2,.8,.25,1);border:none;padding:0;background:none;font-family:inherit}
+  #card.flip{transform:rotateY(180deg)}
+  .face{position:absolute;inset:0;backface-visibility:hidden;border-radius:24px;background:#fff;
+        border:1px solid var(--line);box-shadow:0 10px 30px rgba(80,60,30,.12);
+        display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;padding:20px}
+  .face.back{transform:rotateY(180deg)}
+  .word{font-size:clamp(30px,8.5vw,70px);font-weight:800;line-height:1.15;text-align:center;letter-spacing:.02em}
+  .romaji{font-size:clamp(13px,3vw,20px);color:var(--sub);letter-spacing:.08em}
+  .en{font-size:clamp(14px,3.2vw,22px);color:var(--accent);font-weight:700;text-align:center}
+  .tag{position:absolute;top:16px;left:20px;font-size:12px;font-weight:700;letter-spacing:.1em}
+  .tap{position:absolute;bottom:16px;font-size:12px;color:var(--sub);letter-spacing:.1em}
+  .hide{visibility:hidden}
+  .idle .word{font-size:clamp(20px,5vw,32px);color:var(--sub);font-weight:700}
+
+  #timer{height:6px;background:var(--line);border-radius:999px;width:min(92vw,620px);margin:0 auto;overflow:hidden;display:none}
+  #timer i{display:block;height:100%;background:var(--accent);width:100%}
+
+  /* ---------- ものがたりモード ---------- */
+  #compose{display:none;flex-direction:column;gap:10px;align-items:center;padding:6px 14px 14px}
+  #compose .prog{font-size:12px;color:var(--sub);font-weight:700;letter-spacing:.15em}
+  #line{width:min(92vw,620px);border:2px solid var(--line);border-radius:16px;padding:14px 16px;
+        font-family:inherit;font-size:clamp(16px,3.6vw,20px);line-height:1.6;resize:none;background:#fff;color:var(--ink)}
+  #line:focus{outline:none;border-color:var(--accent)}
+  .crow{display:flex;gap:10px;align-items:center}
+  #mic[aria-pressed="true"]{background:var(--accent);color:#fff;border-color:var(--accent)}
+
+  #log{display:flex;gap:8px;overflow-x:auto;padding:12px 14px 18px;border-top:1px solid var(--line);scrollbar-width:none}
+  #log::-webkit-scrollbar{display:none}
+  #log li{list-style:none;flex:0 0 auto;background:#fff;border:1px solid var(--line);border-left:4px solid var(--c,#ccc);
+          border-radius:10px;padding:8px 12px;font-size:14px;font-weight:700;white-space:nowrap;color:var(--ink)}
+  #log li small{display:block;font-size:10px;color:var(--sub);font-weight:400}
+
+  /* ---------- 完成した物語 ---------- */
+  #book{display:none;flex:1;align-items:center;justify-content:center;padding:24px 16px;min-height:100dvh}
+  .sheet{background:#fff;border:1px solid var(--line);border-radius:24px;box-shadow:0 10px 30px rgba(80,60,30,.12);
+         padding:clamp(24px,5vw,44px);width:min(94vw,640px)}
+  .sheet .lbl{font-size:11px;letter-spacing:.25em;color:var(--accent);font-weight:700}
+  .sheet h2{font-size:clamp(18px,4.5vw,26px);margin:6px 0 0;line-height:1.5}
+  #bList{margin:22px 0 0;padding:0;list-style:none;counter-reset:n}
+  #bList li{font-size:clamp(16px,3.8vw,21px);line-height:1.9;padding:14px 0;border-bottom:1px dashed var(--line)}
+  .cw{display:inline-block;background:var(--paper);border:1px solid var(--line);border-radius:8px;
+      padding:2px 10px;font-size:.72em;font-weight:700;color:var(--accent);margin-right:10px;vertical-align:2px}
+  .bact{display:flex;gap:10px;margin-top:26px;flex-wrap:wrap;justify-content:center}
+  @media (max-width:480px){ header{font-size:12px} .chip{padding:6px 11px;font-size:12px} }
+</style>
+</head>
+<body>
+
+<section id="setup">
+  <div id="lang">
+    <button class="chip" data-lang="ja" aria-pressed="true">日本語</button>
+    <button class="chip" data-lang="en" aria-pressed="false">English</button>
+  </div>
+  <h1 id="t-title">カタルタ<small id="t-sub">C O N V E R S A T I O N　C A R D S</small></h1>
+  <div class="decks" id="deckPick"></div>
+  <button class="btn" id="start">はじめる</button>
+  <p class="hint" id="t-hint"></p>
+</section>
+
+<section id="play">
+  <header>
+    <button class="chip" id="tStory" aria-pressed="false">ものがたり</button>
+    <button class="chip" id="tHint" aria-pressed="true">意味 ON</button>
+    <button class="chip" id="tTurn" aria-pressed="false">交互</button>
+    <button class="chip" id="tTimer" aria-pressed="false">60秒</button>
+    <button class="chip" id="odaiBtn">お題</button>
+    <span class="spacer"></span>
+    <span><span id="t-remain">のこり</span> <span id="count">0</span><span id="t-cards">枚</span></span>
+    <button class="chip" id="shuffle">シャッフル</button>
+    <button class="chip" id="back">デッキ選択</button>
+  </header>
+
+  <div id="turn" class="hide"></div>
+  <div id="odai"></div>
+
+  <div id="stage"><div id="cardWrap">
+    <button id="card">
+      <div class="face front idle">
+        <div class="word" id="t-tap">タップしてめくる</div>
+        <div class="tap" id="t-space">SPACE キーでもOK</div>
+      </div>
+      <div class="face back">
+        <div class="tag" id="tag"></div>
+        <div class="word" id="w"></div>
+        <div class="romaji" id="r"></div>
+        <div class="en" id="e"></div>
+      </div>
+    </button>
+  </div></div>
+  <div id="timer"><i></i></div>
+
+  <div id="compose">
+    <div class="prog"><span id="pnum">1</span> / 5</div>
+    <textarea id="line" rows="2"></textarea>
+    <div class="crow">
+      <button class="chip" id="mic" aria-pressed="false">🎤</button>
+      <button class="btn sm" id="next">つぎへ</button>
+    </div>
+  </div>
+
+  <ul id="log"></ul>
+</section>
+
+<section id="book">
+  <div class="sheet">
+    <div class="lbl" id="t-booklbl">きょうの ものがたり</div>
+    <h2 id="bTitle"></h2>
+    <ol id="bList"></ol>
+    <div class="bact">
+      <button class="btn sm" id="copy">リンクをコピー</button>
+      <button class="chip" id="again">もう一度あそぶ</button>
+    </div>
+  </div>
+</section>
+
+<script>
+/* =========================================================
+   データ  card = word|reading|meaning
+   ========================================================= */
+const DATA = {
+ja:{
+ ui:{title:"カタルタ",sub:"C O N V E R S A T I O N　C A R D S",start:"はじめる",
+  hint:"つかうデッキをえらんで「はじめる」。<br>カードをタップ（またはスペースキー）でめくる → 出たことばで話をつづける。<br>「ものがたり」ONで、5枚＝1話の物語をつくって共有できます。",
+  story:"ものがたり",hintOn:"意味 ON",hintOff:"意味 OFF",turn:"交互",timer:"60秒",odai:"お題",
+  remain:"のこり",cards:"枚",shuffle:"シャッフル",back:"デッキ選択",tap:"タップしてめくる",space:"SPACE キーでもOK",
+  p1:"せんせい",p2:"せいと",nextTurn:t=>`つぎは <span>${t}</span>`,
+  next:"つぎへ",mic:"🎤 はなす",ph:"このことばで、つづきを一文どうぞ",
+  bookLbl:"きょうの ものがたり",copy:"リンクをコピー",copied:"コピーしました！",again:"もう一度あそぶ",cards_n:"枚"},
+ odai:["きのう、ちょっと変なことがありました。","わたしの一番すきな場所は…","はじめて日本に来た日のこと。","むかしむかし、あるところに…","実は、まだだれにも言っていないことがあります。","きょう、朝おきていちばんにしたことは…","10年後のわたしは…","この町でいちばんおいしいものは…","こまったとき、いつもこうします。","小さいころ、こわかったものは…"],
+ decks:{
+  standard:{name:"スタンダード",sub:"日常の話をつなぐ",c:"#c0392b",d:`ときどき|tokidoki|sometimes;もしかしたら|moshikashitara|maybe;言ってみれば|itte mireba|so to speak;もしかすると|moshika suruto|possibly;実際に|jissai ni|actually;やっぱり|yappari|after all;残念ながら|zannen nagara|unfortunately;だからこそ|dakara koso|that's exactly why;というのは|to iu no wa|the reason is;というのも|to iu no mo|because, you see;要するに|yo suru ni|in short;それはさておき|sore wa sateoki|anyway, aside from that;一方|ippo|on the other hand;思えば|omoeba|looking back;幸運にも|koun ni mo|luckily;もし|moshi|if;または|mata wa|or;もともと|motomoto|originally;言い換えれば|iikaereba|in other words;今のところ|ima no tokoro|for now;でも|demo|but;であっても|de atte mo|even so;いつのまにか|itsu no ma ni ka|before I knew it;個人的に|kojinteki ni|personally;いつもは|itsumo wa|usually;とはいえ|to wa ie|that said;そのくせ|sono kuse|and yet;偶然にも|guzen ni mo|by coincidence;いっそ|isso|might as well;結局|kekkyoku|in the end;たとえば|tatoeba|for example;どの道|dono michi|either way;いつか|itsuka|someday;せめて|semete|at least;少なくとも|sukunakutomo|at the very least;それから|sore kara|and then;そろそろ|sorosoro|it's about time;というわけで|to iu wake de|so, therefore;そういえば|so ieba|come to think of it;いずれにせよ|izure ni seyo|in any case;せっかくだから|sekkaku dakara|since we have the chance;だから|dakara|so;ちなみに|chinami ni|by the way;うっかりと|ukkari to|carelessly;たしかに|tashika ni|certainly;と言って|to itte|saying that;できれば|dekireba|if possible;さすがに|sasuga ni|even so;なぜか|naze ka|for some reason;もちろん|mochiron|of course;特に|toku ni|especially;具体的には|gutaiteki ni wa|specifically;つまり|tsumari|in other words`},
+  life:{name:"ライフ",sub:"人生をふりかえる",c:"#1e8449",d:`去年|kyonen|last year;ありがたいことに|arigatai koto ni|thankfully;いま|ima|now;10年後|junen go|10 years from now;10年前|junen mae|10 years ago;不運にも|fuun ni mo|unluckily;なぜか|naze ka|for some reason;20年前|nijunen mae|20 years ago;いつの日か|itsu no hi ka|one day;いまでも|ima demo|even now;来年|rainen|next year;何度も|nando mo|over and over;恥ずかしながら|hazukashi nagara|embarrassingly;最近|saikin|lately;一度だけ|ichido dake|just once;だからもし|dakara moshi|so if;これから|kore kara|from now on;そもそも|somosomo|to begin with;なるべく|narubeku|as much as possible;たとえば|tatoeba|for example;少しでも|sukoshi demo|even a little;今日|kyo|today;まちがいなく|machigai naku|without a doubt;つまり|tsumari|in other words;たまには|tama ni wa|once in a while;そうだ！|so da|oh, I know!;はじめて|hajimete|for the first time;思いがけず|omoigakezu|unexpectedly;しょうじきなところ|shojiki na tokoro|honestly;でも|demo|but;幸運にも|koun ni mo|luckily;近いうち|chikai uchi|soon;なぜなら|naze nara|because;明日|ashita|tomorrow;いつでも|itsu demo|anytime;5年前|gonen mae|5 years ago;だから|dakara|so;人生最後の日|jinsei saigo no hi|the last day of my life;振り返ると|furikaeru to|looking back;もし|moshi|if;長い目で見れば|nagai me de mireba|in the long run;一見|ikken|at first glance;ひとつだけ|hitotsu dake|just one thing;20年後|nijunen go|20 years from now;5年後|gonen go|5 years from now;きっと|kitto|surely;そして|soshite|and then;不思議なことに|fushigi na koto ni|strangely enough;ひょっとすると|hyotto suru to|perhaps;面白いことに|omoshiroi koto ni|interestingly;案外|angai|unexpectedly;どこかで|dokoka de|somewhere;しかしなぜ|shikashi naze|but why;昨日|kino|yesterday`},
+  logical:{name:"ロジカル",sub:"考えを組み立てる",c:"#2471a3",d:`今のところ|ima no tokoro|for now;歴史的には|rekishiteki ni wa|historically;おそらく|osoraku|probably;なにせ|nanise|after all;または|mata wa|or;実際|jissai|in fact;詳しくは|kuwashiku wa|in detail;できれば|dekireba|if possible;要するに|yo suru ni|in short;しかも|shikamo|what's more;現在|genzai|currently;結局|kekkyoku|in the end;たとえば|tatoeba|for example;言い換えると|iikaeru to|in other words;つまり|tsumari|that is;そして|soshite|and;だから|dakara|therefore;残念ながら|zannen nagara|unfortunately;ちなみに|chinami ni|by the way;では|dewa|then;そういう意味で|so iu imi de|in that sense;したがって|shitagatte|therefore;偶然にも|guzen ni mo|by coincidence;むしろ|mushiro|rather;こうして|koshite|in this way;さて|sate|now then;もともと|motomoto|originally;現実的には|genjitsuteki ni wa|realistically;にもかかわらず|nimo kakawarazu|nevertheless;ついに|tsuini|finally;なぜなら|naze nara|because;事実上|jijitsujo|in effect;ところが|tokoroga|however;もし|moshi|if;特に|toku ni|especially;言うまでもなく|iu made mo naku|needless to say;それに|sore ni|besides;同様に|doyo ni|likewise;具体的には|gutaiteki ni wa|specifically;とにかく|tonikaku|anyway;同時に|doji ni|at the same time;事実|jijitsu|in fact;通常|tsujo|usually;基本的に|kihonteki ni|basically;一般的には|ippanteki ni wa|generally;厳密には|genmitsu ni wa|strictly speaking;正確には|seikaku ni wa|to be precise;それはさておき|sore wa sateoki|that aside;さもなければ|samonakereba|otherwise;本質的に|honshitsuteki ni|essentially;対照的に|taishoteki ni|in contrast;しかし|shikashi|however;それでも|soredemo|even so`},
+  emotion:{name:"エモーション",sub:"気持ちがもれる",c:"#b7791f",d:`まあ|maa|well;できれば|dekireba|if I could;思わず|omowazu|without thinking;びみょうに|bimyo ni|subtly;一応|ichio|just in case;あわよくば|awayokuba|if all goes well;腹立たしいことに|haradatashii koto ni|infuriatingly;あまりに|amari ni|too much;もし|moshi|if;少し|sukoshi|a little;うっかり|ukkari|carelessly;悲しいことに|kanashii koto ni|sadly;ちょっと|chotto|a bit;だれか|dareka|somebody;そういえば|so ieba|come to think of it;もう|mo|already / enough;ああ|aa|ah;というのも|to iu no mo|because, you see;ひそかに|hisoka ni|secretly;はあ|haa|sigh;わりと|wari to|fairly;たぶん|tabun|probably;いったい|ittai|what on earth;今度|kondo|next time;もしくは|moshiku wa|or;いつか|itsuka|someday;でも|demo|but;もしかすると|moshika suruto|possibly;ずっと|zutto|all along;ほら|hora|look!;ずいぶん|zuibun|quite;なかなか|nakanaka|pretty / not easily;ここだけの話|koko dake no hanashi|just between us;せいぜい|seizei|at most;本当は|honto wa|actually, truthfully;つまり|tsumari|in other words;あまり|amari|not much;だから|dakara|so;思い切って|omoikitte|boldly;あああああ|aaaaa|aaaargh;はっきり言って|hakkiri itte|frankly;たとえば|tatoeba|for example;そして|soshite|and then;もっと|motto|more;それにしても|sore ni shite mo|even so;もう一度|mo ichido|once more;かなり|kanari|considerably;なんとなく|nantonaku|somehow;うれしいことに|ureshii koto ni|happily;どうしよう|do shiyo|what should I do;楽しみなことに|tanoshimi na koto ni|excitingly;どうしても|doshite mo|no matter what;よりによって|yori ni yotte|of all things`},
+  story:{name:"ストーリーテリング",sub:"物語をつくる",c:"#7d3c98",d:`ところが|tokoroga|however;いっぽう|ippo|meanwhile;そこへ|soko e|and there;そらには|sora ni wa|in the sky;せかいじゅうに|sekaiju ni|all over the world;おや！|oya|oh!;それから|sore kara|and then;ところで|tokorode|by the way;とつぜん|totsuzen|suddenly;もう|mo|already;むかし|mukashi|long ago;だから|dakara|so;どうして|doshite|why;もちろん|mochiron|of course;なんだか|nandaka|somehow;さあ|saa|come on;どんどん|dondon|rapidly;しかし|shikashi|but;ときどき|tokidoki|sometimes;しばらくして|shibaraku shite|after a while;どこまでも|doko made mo|endlessly;しかも|shikamo|what's more;すると|suruto|then;つまり|tsumari|in short;せっかく|sekkaku|with all that effort;どうか|doka|please;そのころ|sono koro|around that time;いつのまにか|itsu no ma ni ka|before anyone knew;あるひ|aru hi|one day;まだ|mada|still;でも|demo|but;まいにち|mainichi|every day;じつは|jitsu wa|actually;ふしぎなことに|fushigi na koto ni|strangely;しーっ！|shii|shhh!;いま|ima|now;やがて|yagate|before long;そこには|soko ni wa|there;そして|soshite|and;けれども|keredomo|however;もし|moshi|if;100ねんたって|hyakunen tatte|100 years later;いつも|itsumo|always;さて|sate|now then;また|mata|again;とおくから|toku kara|from afar;もしかすると|moshika suruto|perhaps;きっと|kitto|surely;そのとき|sono toki|at that moment;だんだん|dandan|gradually;まるで|marude|just like;どうやら|doyara|apparently;あちこちで|achikochi de|here and there`}
+ }},
+
+en:{
+ ui:{title:"KATARUTA",sub:"E N G L I S H　C O N V E R S A T I O N　C A R D S",start:"Start",
+  hint:"Pick your decks and press Start.<br>Tap the card (or hit SPACE) → keep the conversation going with the word you get.<br>Turn on <b>Story</b> to build a 5-card story you can share.",
+  story:"Story",hintOn:"Meaning ON",hintOff:"Meaning OFF",turn:"Take turns",timer:"60 sec",odai:"Prompt",
+  remain:"",cards:" left",shuffle:"Shuffle",back:"Decks",tap:"Tap to flip",space:"or press SPACE",
+  p1:"Teacher",p2:"Student",nextTurn:t=>`Next: <span>${t}</span>`,
+  next:"Next",mic:"🎤 Speak",ph:"Continue the story with this word",
+  bookLbl:"T O D A Y ' S　S T O R Y",copy:"Copy link",copied:"Copied!",again:"Play again",cards_n:""},
+ odai:["Yesterday, something strange happened.","My favorite place in the world is...","The first time I came to Japan...","Once upon a time, in a small town...","There's something I've never told anyone.","The first thing I did this morning was...","Ten years from now, I will...","The best food in this town is...","Whenever I'm in trouble, I always...","When I was little, I was scared of..."],
+ decks:{
+  standard:{name:"Standard",sub:"everyday connectors",c:"#c0392b",d:`actually||実は;by the way||ちなみに;for example||たとえば;in short||要するに;honestly||正直に言うと;of course||もちろん;luckily||運よく;unfortunately||残念ながら;suddenly||とつぜん;personally||個人的に;anyway||とにかく;besides||それに;even so||それでも;in fact||実際は;at least||少なくとも;someday||いつか;usually||いつもは;sometimes||ときどき;probably||たぶん;obviously||明らかに;instead||そのかわり;meanwhile||一方で;after all||結局;to be honest||正直なところ;if possible||できれば;come to think of it||そういえば;on the other hand||他方では;strangely enough||不思議なことに;more importantly||もっと大事なのは;in other words||言いかえると;that said||とはいえ;somehow||なんとなく;finally||ついに;especially||特に;either way||どちらにしても;therefore||だから;so far||今のところ;originally||もともと;surprisingly||おどろいたことに;no wonder||どうりで`},
+  life:{name:"Life",sub:"look back on your life",c:"#1e8449",d:`last year||去年;ten years ago||10年前;when I was a kid||子どものころ;these days||最近;for the first time||はじめて;someday||いつか;right now||いま;tomorrow||明日;next year||来年;ten years from now||10年後;looking back||振り返ると;only once||一度だけ;over and over||何度も;ever since||それ以来;in the long run||長い目で見れば;on my last day||人生最後の日に;thankfully||ありがたいことに;embarrassingly||恥ずかしながら;without a doubt||まちがいなく;if I could||できるなら;the truth is||本当のところ;from now on||これから;back then||あのころ;every summer||毎年夏に;one rainy day||ある雨の日;my family says||家族が言うには;I never told anyone||誰にも言ってないけど;I still remember||今でも覚えている;I used to||昔はよく;at first||最初は;eventually||やがて;to be fair||公平に言えば;oddly enough||妙なことに;more than anything||何よりも;deep down||心の奥では;someday soon||近いうちに;every single day||毎日必ず;just once more||もう一度だけ;if I'm lucky||運がよければ;I'm starting to||〜し始めている`},
+  logical:{name:"Logical",sub:"build an argument",c:"#2471a3",d:`because||なぜなら;therefore||したがって;however||しかし;in contrast||対照的に;for instance||たとえば;specifically||具体的には;generally||一般的に;strictly speaking||厳密には;in theory||理論上は;in practice||実際には;as a result||その結果;on the contrary||それどころか;nevertheless||にもかかわらず;similarly||同様に;first of all||まず第一に;secondly||第二に;in conclusion||結論として;that is why||だから;the point is||要点は;the problem is||問題は;in my view||私の考えでは;based on that||それに基づいて;if so||もしそうなら;otherwise||さもなければ;regardless||それに関係なく;to be precise||正確には;historically||歴史的には;statistically||統計的には;needless to say||言うまでもなく;at the same time||同時に;on top of that||さらに;the fact is||事実は;in any case||いずれにせよ;assuming that||〜と仮定すると;compared to that||それに比べて;ultimately||最終的には;put simply||簡単に言えば;which means||つまり;that depends||場合による;in short||要するに`},
+  emotion:{name:"Emotion",sub:"feelings slip out",c:"#b7791f",d:`honestly||正直;oh no||しまった;wow||わあ;somehow||なんだか;secretly||ひそかに;I can't believe||信じられない;to be honest||ぶっちゃけ;between you and me||ここだけの話;I wish||〜だったらなあ;I'm afraid||残念だけど;thank goodness||よかった;how annoying||腹立たしい;sadly||悲しいことに;happily||うれしいことに;without thinking||思わず;a little||少し;way too much||あまりに;not really||それほどでも;kind of||なんとなく;seriously||マジで;finally||やっと;again||また;still||まだ;of all things||よりによって;deep down||本当は;for some reason||なぜか;I just want to||ただ〜したい;I can't stop||やめられない;I almost||もう少しで;hopefully||うまくいけば;whatever happens||何があっても;no matter what||どうしても;please||どうか;look!||ほら！;ugh||うっ;hmm||うーん;at last||ついに;if only||〜さえすれば;I promise||約束する;my heart||胸が`},
+  story:{name:"Storytelling",sub:"make up a tale",c:"#7d3c98",d:`once upon a time||むかしむかし;one day||ある日;suddenly||とつぜん;meanwhile||そのころ;and then||それから;but then||しかしそのとき;far away||とおくで;deep in the forest||森の奥で;a hundred years later||100年後;all over the world||世界中で;in the sky||空には;nobody knew||誰も知らなかった;little by little||だんだん;at that moment||そのとき;before anyone knew||いつのまにか;strangely||ふしぎなことに;shhh!||しーっ！;look out!||あぶない！;every night||毎晩;the next morning||次の朝;a voice said||声がした;without a sound||音もなく;just like magic||まるで魔法のように;somewhere far||どこか遠くで;and so||そうして;from that day on||その日から;slowly||ゆっくりと;faster and faster||どんどん速く;at last||ついに;the end?||おわり？;in a small town||小さな町で;under the bridge||橋の下で;on a rainy night||雨の夜に;something moved||何かが動いた;then everything||そして全てが;nobody moved||誰も動かなかった;a long time passed||長い時が過ぎた;and yet||それでも;happily ever after||めでたしめでたし;the door opened||ドアが開いた`}
+ }}
+};
+
+const $=s=>document.querySelector(s);
+const STORY_LEN=5;
+let lang="ja", L=null, DECKS=null;
+let picked=new Set(["standard"]), pile=[], turnIdx=0, timerId=null, cur=null, story=null;
+
+/* ---------- language ---------- */
+function setLang(l){
+  lang=l; L=DATA[l];
+  DECKS = Object.fromEntries(Object.entries(L.decks).map(([k,v])=>[k,{
+    ...v, cards: v.d.split(";").map(s=>{const[w,r,e]=s.split("|");return{w,r,e,deck:k}})
+  }]));
+  document.documentElement.lang=l;
+  const u=L.ui;
+  $("#t-title").childNodes[0].nodeValue=u.title; $("#t-sub").textContent=u.sub;
+  $("#start").textContent=u.start; $("#t-hint").innerHTML=u.hint;
+  $("#tStory").textContent=u.story; $("#tHint").textContent=u.hintOn; $("#tTurn").textContent=u.turn;
+  $("#tTimer").textContent=u.timer; $("#odaiBtn").textContent=u.odai;
+  $("#t-remain").textContent=u.remain; $("#t-cards").textContent=u.cards;
+  $("#shuffle").textContent=u.shuffle; $("#back").textContent=u.back;
+  $("#t-tap").textContent=u.tap; $("#t-space").textContent=u.space;
+  $("#next").textContent=u.next; $("#mic").textContent=u.mic; $("#line").placeholder=u.ph;
+  $("#t-booklbl").textContent=u.bookLbl; $("#copy").textContent=u.copy; $("#again").textContent=u.again;
+  document.querySelectorAll("#lang .chip").forEach(b=>b.setAttribute("aria-pressed",b.dataset.lang===l));
+  picked=new Set(["standard"]); renderDecks(); $("#odai").innerHTML="";
+}
+function renderDecks(){
+  $("#deckPick").innerHTML = Object.entries(DECKS).map(([k,v])=>
+    `<button class="deck" data-k="${k}" style="--c:${v.c}" aria-pressed="${picked.has(k)}">
+       <span class="dot"></span><span>${v.name}<small>${v.sub} ・ ${v.cards.length}</small></span></button>`).join("");
+}
+$("#lang").onclick = e=>{ const b=e.target.closest("[data-lang]"); if(b) setLang(b.dataset.lang); };
+
+/* ---------- setup ---------- */
+$("#deckPick").onclick = e=>{
+  const b=e.target.closest(".deck"); if(!b)return;
+  const k=b.dataset.k;
+  picked.has(k)?picked.delete(k):picked.add(k);
+  b.setAttribute("aria-pressed",picked.has(k));
+  $("#start").disabled = picked.size===0;
+};
+$("#start").onclick = ()=>{ $("#setup").style.display="none"; $("#play").style.display="flex"; shuffle(); };
+$("#back").onclick  = ()=>{ $("#play").style.display="none"; $("#setup").style.display="flex"; stopTimer(); };
+
+/* ---------- pile ---------- */
+function setCount(){
+  $("#count").textContent = pile.length;
+  $("#cardWrap").classList.toggle("last", pile.length<=2);
+}
+function refill(){
+  pile = [...picked].flatMap(k=>DECKS[k].cards);
+  for(let i=pile.length-1;i>0;i--){const j=Math.random()*(i+1)|0;[pile[i],pile[j]]=[pile[j],pile[i]];}
+  setCount();
+}
+function shuffle(){                       // 明示リセット：履歴もクリア
+  refill(); $("#card").classList.remove("flip"); $("#log").innerHTML=""; cur=null; stopTimer();
+}
+$("#shuffle").onclick = e=>{ e.stopPropagation(); shuffle(); };
+
+/* ---------- draw ---------- */
+function draw(){
+  if($("#card").classList.contains("flip")){ $("#card").classList.remove("flip"); setTimeout(draw,220); return; }
+  if(!pile.length) refill();              // 引き切っても履歴は残す
+  const c = cur = pile.pop();
+  const d = DECKS[c.deck];
+  $("#tag").textContent = d.name; $("#tag").style.color = d.c;
+  $("#w").textContent = c.w; $("#r").textContent = c.r||""; $("#e").textContent = c.e;
+  $("#card").classList.add("flip");
+  setCount();
+
+  const li=document.createElement("li");
+  li.style.setProperty("--c",d.c);
+  li.innerHTML = `${c.w}<small>${c.e}</small>`;
+  $("#log").prepend(li);
+
+  if($("#tTurn").getAttribute("aria-pressed")==="true"){ turnIdx^=1; renderTurn(); }
+  if($("#tTimer").getAttribute("aria-pressed")==="true") startTimer();
+  if(story) setTimeout(()=>$("#line").focus(),300);
+}
+$("#card").onclick = draw;
+addEventListener("keydown", e=>{
+  if($("#play").style.display==="none") return;
+  if(/^(TEXTAREA|INPUT)$/.test(e.target.tagName)) return;   // 入力中はキーを奪わない
+  if(e.code==="Space"||e.code==="Enter"){ e.preventDefault(); draw(); }
+});
+
+/* ---------- toggles ---------- */
+function toggle(el){ el.setAttribute("aria-pressed", el.getAttribute("aria-pressed")!=="true"); }
+$("#tHint").onclick = e=>{ toggle(e.target);
+  const on = e.target.getAttribute("aria-pressed")==="true";
+  e.target.textContent = on?L.ui.hintOn:L.ui.hintOff;
+  $("#r").style.visibility = $("#e").style.visibility = on?"visible":"hidden";
+};
+$("#tTurn").onclick = e=>{ toggle(e.target);
+  const on=e.target.getAttribute("aria-pressed")==="true";
+  $("#turn").classList.toggle("hide",!on); renderTurn();
+};
+function renderTurn(){ $("#turn").innerHTML = L.ui.nextTurn(turnIdx?L.ui.p2:L.ui.p1); }
+$("#tTimer").onclick = e=>{ toggle(e.target);
+  const on=e.target.getAttribute("aria-pressed")==="true";
+  $("#timer").style.display = on?"block":"none";
+  if(!on) stopTimer();
+};
+function pickOdai(){ const t=L.odai[Math.random()*L.odai.length|0];
+  $("#odai").innerHTML = `<b>${L.ui.odai}</b>${t}`; return t; }
+$("#odaiBtn").onclick = e=>{ e.stopPropagation(); pickOdai(); };
+
+/* ---------- 60s timer ---------- */
+function startTimer(){
+  stopTimer();
+  const bar=$("#timer i"); let left=60;
+  bar.style.transition="none"; bar.style.width="100%";
+  requestAnimationFrame(()=>{ bar.style.transition="width 1s linear"; });
+  timerId=setInterval(()=>{ left--; bar.style.width=(left/60*100)+"%"; if(left<=0) stopTimer(); },1000);
+}
+function stopTimer(){ if(timerId) clearInterval(timerId); timerId=null; }
+
+/* ---------- ものがたりモード：カード1枚＝1文、5枚で1話 ---------- */
+$("#tStory").onclick = e=>{ toggle(e.target);
+  const on = e.target.getAttribute("aria-pressed")==="true";
+  $("#compose").style.display = on?"flex":"none";
+  if(on){ story={odai:pickOdai(),items:[],lang}; $("#pnum").textContent=1; $("#line").value=""; shuffle(); }
+  else story=null;
+};
+$("#next").onclick = ()=>{
+  if(!story) return;
+  if(!cur){ draw(); return; }                       // まだ1枚もめくってない
+  const t = $("#line").value.trim();
+  if(!t){ $("#line").focus(); return; }
+  story.items.push({w:cur.w, t});
+  $("#line").value=""; cur=null;
+  if(story.items.length>=STORY_LEN) return showBook(story);
+  $("#pnum").textContent = story.items.length+1;
+  draw();
+};
+
+/* ---------- 音声入力（対応ブラウザのみ・結果はあとから直せる） ---------- */
+const SR = window.SpeechRecognition||window.webkitSpeechRecognition;
+if(!SR) $("#mic").style.display="none";
+else{
+  let rec=null;
+  $("#mic").onclick = ()=>{
+    if(rec){ rec.stop(); return; }
+    rec = new SR(); rec.lang = lang==="ja" ? "ja-JP" : "en-US";
+    rec.interimResults=true; rec.continuous=true;
+    const base = $("#line").value;
+    rec.onresult = ev=>{
+      let s=""; for(let i=0;i<ev.results.length;i++) s+=ev.results[i][0].transcript;
+      $("#line").value = (base+s).trim();
+    };
+    rec.onend = ()=>{ rec=null; $("#mic").setAttribute("aria-pressed","false"); $("#line").focus(); };
+    rec.onerror = rec.onend;
+    rec.start(); $("#mic").setAttribute("aria-pressed","true");
+  };
+}
+
+/* ---------- 完成 → 文庫ページ＋共有リンク（サーバー不要・URLに物語を格納） ---------- */
+const esc = x=>x.replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]));
+function showBook(s){
+  if(s.lang && s.lang!==lang) setLang(s.lang);
+  $("#setup").style.display="none"; $("#play").style.display="none"; $("#book").style.display="flex";
+  $("#bTitle").textContent = s.odai;
+  $("#bList").innerHTML = s.items.map(i=>`<li><span class="cw">${esc(i.w)}</span>${esc(i.t)}</li>`).join("");
+  location.hash = "s=" + btoa(encodeURIComponent(JSON.stringify(s)));
+  stopTimer();
+}
+$("#copy").onclick = async e=>{
+  try{ await navigator.clipboard.writeText(location.href); e.target.textContent=L.ui.copied; }
+  catch{ e.target.textContent=location.href; }
+};
+$("#again").onclick = ()=>{ location.hash=""; location.reload(); };
+
+/* ---------- 起動 ---------- */
+setLang(navigator.language && navigator.language.startsWith("ja") ? "ja" : "ja");
+(()=>{ const m=location.hash.match(/s=(.+)/);
+  if(!m) return;
+  try{ showBook(JSON.parse(decodeURIComponent(atob(m[1])))); }catch{}
+})();
+
+/* self-check: 両言語ぶん、3項目そろったカードだけを持つ */
+console.assert(Object.values(DATA).every(l=>Object.values(l.decks).every(d=>{
+  const c=d.d.split(";").map(s=>s.split("|"));
+  return c.length>35 && c.every(x=>x.length===3 && x[0] && x[2]);
+})), "deck data broken");
+</script>
+</body>
+</html>
