@@ -104,6 +104,8 @@
             display:flex;align-items:baseline;gap:10px}
   .cw{flex:0 0 auto;background:var(--paper);border:1px solid var(--line);border-radius:8px;
       padding:2px 10px;font-size:.72em;font-weight:700;color:var(--accent);white-space:nowrap}
+  .ln{flex:1}
+  .tr{color:var(--sub);font-size:.78em;line-height:1.7;margin-top:2px}
   .bact{display:flex;gap:10px;margin-top:26px;flex-wrap:wrap;justify-content:center}
   @media (max-width:480px){ header{font-size:12px} .chip{padding:6px 11px;font-size:12px} }
 </style>
@@ -173,6 +175,7 @@
     <h2 id="bTitle"></h2>
     <ol id="bList"></ol>
     <div class="bact">
+      <button class="chip" id="tr">🇬🇧 英語にする</button>
       <button class="btn sm" id="copy">リンクをコピー</button>
       <button class="chip" id="again">もう一度あそぶ</button>
     </div>
@@ -192,7 +195,8 @@ ja:{
   p1:"せんせい",p2:"せいと",nextTurn:t=>`つぎは <span>${t}</span>`,
   next:"つぎへ",mic:"🎤 はなす",ph:"このことばで、つづきを一文どうぞ",
   redraw:"🔄 引き直し",finish:"おわり",punit:"文目",
-  bookLbl:"きょうの ものがたり",copy:"リンクをコピー",copied:"コピーしました！",again:"もう一度あそぶ",cards_n:"枚"},
+  bookLbl:"きょうの ものがたり",copy:"リンクをコピー",copied:"コピーしました！",again:"もう一度あそぶ",cards_n:"枚",
+  tr:"🇬🇧 英語にする",translating:"翻訳中…",trFail:"翻訳できませんでした"},
  odai:["きのう、ちょっと変なことがありました。","わたしの一番すきな場所は…","はじめて日本に来た日のこと。","むかしむかし、あるところに…","実は、まだだれにも言っていないことがあります。","きょう、朝おきていちばんにしたことは…","10年後のわたしは…","この町でいちばんおいしいものは…","こまったとき、いつもこうします。","小さいころ、こわかったものは…"],
  decks:{
   standard:{name:"スタンダード",sub:"日常の話をつなぐ",c:"#c0392b",d:`ときどき|tokidoki|sometimes;もしかしたら|moshikashitara|maybe;言ってみれば|itte mireba|so to speak;もしかすると|moshika suruto|possibly;実際に|jissai ni|actually;やっぱり|yappari|after all;残念ながら|zannen nagara|unfortunately;だからこそ|dakara koso|that's exactly why;というのは|to iu no wa|the reason is;というのも|to iu no mo|because, you see;要するに|yo suru ni|in short;それはさておき|sore wa sateoki|anyway, aside from that;一方|ippo|on the other hand;思えば|omoeba|looking back;幸運にも|koun ni mo|luckily;もし|moshi|if;または|mata wa|or;もともと|motomoto|originally;言い換えれば|iikaereba|in other words;今のところ|ima no tokoro|for now;でも|demo|but;であっても|de atte mo|even so;いつのまにか|itsu no ma ni ka|before I knew it;個人的に|kojinteki ni|personally;いつもは|itsumo wa|usually;とはいえ|to wa ie|that said;そのくせ|sono kuse|and yet;偶然にも|guzen ni mo|by coincidence;いっそ|isso|might as well;結局|kekkyoku|in the end;たとえば|tatoeba|for example;どの道|dono michi|either way;いつか|itsuka|someday;せめて|semete|at least;少なくとも|sukunakutomo|at the very least;それから|sore kara|and then;そろそろ|sorosoro|it's about time;というわけで|to iu wake de|so, therefore;そういえば|so ieba|come to think of it;いずれにせよ|izure ni seyo|in any case;せっかくだから|sekkaku dakara|since we have the chance;だから|dakara|so;ちなみに|chinami ni|by the way;うっかりと|ukkari to|carelessly;たしかに|tashika ni|certainly;と言って|to itte|saying that;できれば|dekireba|if possible;さすがに|sasuga ni|even so;なぜか|naze ka|for some reason;もちろん|mochiron|of course;特に|toku ni|especially;具体的には|gutaiteki ni wa|specifically;つまり|tsumari|in other words`},
@@ -210,7 +214,8 @@ en:{
   p1:"Teacher",p2:"Student",nextTurn:t=>`Next: <span>${t}</span>`,
   next:"Next",mic:"🎤 Speak",ph:"Continue the story with this word",
   redraw:"🔄 Redraw",finish:"Finish",punit:" ",
-  bookLbl:"T O D A Y ' S　S T O R Y",copy:"Copy link",copied:"Copied!",again:"Play again",cards_n:""},
+  bookLbl:"T O D A Y ' S　S T O R Y",copy:"Copy link",copied:"Copied!",again:"Play again",cards_n:"",
+  tr:"🇯🇵 日本語にする",translating:"Translating…",trFail:"Translation unavailable"},
  odai:["Yesterday, something strange happened.","My favorite place in the world is...","The first time I came to Japan...","Once upon a time, in a small town...","There's something I've never told anyone.","The first thing I did this morning was...","Ten years from now, I will...","The best food in this town is...","Whenever I'm in trouble, I always...","When I was little, I was scared of..."],
  decks:{
   standard:{name:"Standard",sub:"everyday connectors",c:"#c0392b",d:`actually||実は;by the way||ちなみに;for example||たとえば;in short||要するに;honestly||正直に言うと;of course||もちろん;luckily||運よく;unfortunately||残念ながら;suddenly||とつぜん;personally||個人的に;anyway||とにかく;besides||それに;even so||それでも;in fact||実際は;at least||少なくとも;someday||いつか;usually||いつもは;sometimes||ときどき;probably||たぶん;obviously||明らかに;instead||そのかわり;meanwhile||一方で;after all||結局;to be honest||正直なところ;if possible||できれば;come to think of it||そういえば;on the other hand||他方では;strangely enough||不思議なことに;more importantly||もっと大事なのは;in other words||言いかえると;that said||とはいえ;somehow||なんとなく;finally||ついに;especially||特に;either way||どちらにしても;therefore||だから;so far||今のところ;originally||もともと;surprisingly||おどろいたことに;no wonder||どうりで`},
@@ -243,6 +248,7 @@ function setLang(l){
   $("#next").textContent=u.next; $("#mic").textContent=u.mic; $("#line").placeholder=u.ph;
   $("#redraw").textContent=u.redraw; $("#finish").textContent=u.finish; $("#t-punit").textContent=u.punit;
   $("#t-booklbl").textContent=u.bookLbl; $("#copy").textContent=u.copy; $("#again").textContent=u.again;
+  $("#tr").textContent=u.tr;
   document.querySelectorAll("#lang .chip").forEach(b=>b.setAttribute("aria-pressed",b.dataset.lang===l));
   picked=new Set(["standard"]); renderDecks(); $("#odai").innerHTML="";
 }
@@ -400,14 +406,41 @@ const esc = x=>x.replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]));
 /* UTF-8 → base64（日本語をそのまま％符号化すると URL が3倍に膨らむため） */
 const b64e = o=>btoa(String.fromCharCode(...new TextEncoder().encode(JSON.stringify(o))));
 const b64d = s=>JSON.parse(new TextDecoder().decode(Uint8Array.from(atob(s),c=>c.charCodeAt(0))));
+let shown=null;
+function renderBook(s){
+  $("#bTitle").textContent = s.odai;
+  $("#bList").innerHTML = s.items.map((i,n)=>
+    `<li><span class="cw">${esc(i.w)}</span><div class="ln"><span>${esc(i.t)}</span>${
+      s.tr&&s.tr[n] ? `<div class="tr">${esc(s.tr[n])}</div>` : ""}</div></li>`).join("");
+  $("#tr").style.display = s.tr ? "none" : "";
+}
 function showBook(s){
   if(s.lang && s.lang!==lang) setLang(s.lang);
+  shown=s;
   $("#setup").style.display="none"; $("#play").style.display="none"; $("#book").style.display="flex";
-  $("#bTitle").textContent = s.odai;
-  $("#bList").innerHTML = s.items.map(i=>`<li><span class="cw">${esc(i.w)}</span><span>${esc(i.t)}</span></li>`).join("");
+  renderBook(s);
   location.hash = "s=" + b64e(s);
   stopTimer();
 }
+
+/* 翻訳：Chrome内蔵の端末内翻訳（無料・キー不要）。非対応ならGoogle翻訳に投げる */
+$("#tr").onclick = async e=>{
+  if(!shown) return;
+  const src = shown.lang||"ja", dst = src==="ja" ? "en" : "ja";
+  const b = e.currentTarget;
+  if(!("Translator" in self)){
+    const txt = [shown.odai, ...shown.items.map(i=>i.t)].join("\n");
+    open(`https://translate.google.com/?sl=${src}&tl=${dst}&op=translate&text=${encodeURIComponent(txt)}`,"_blank");
+    return;
+  }
+  b.disabled=true; b.textContent=L.ui.translating;
+  try{
+    const t = await Translator.create({sourceLanguage:src,targetLanguage:dst});
+    shown.tr = [];
+    for(const i of shown.items) shown.tr.push(await t.translate(i.t));
+    renderBook(shown); location.hash = "s=" + b64e(shown);
+  }catch{ b.textContent=L.ui.trFail; b.disabled=false; }
+};
 $("#copy").onclick = async e=>{
   try{ await navigator.clipboard.writeText(location.href); e.target.textContent=L.ui.copied; }
   catch{ e.target.textContent=location.href; }
